@@ -1,0 +1,23 @@
+name: rebalance
+version: 0.1.0
+
+# authors:
+#   - name <email@example.com>
+
+# description: |
+#   Short description of rebalance
+
+targets:
+  kadalu-rebalance:
+    main: src/main.cr
+
+
+dependencies:
+  xattr:
+    github: aravindavk/xattr-crystal
+
+# development_dependencies:
+#   webmock:
+#     github: manastech/webmock.cr
+
+# license: MIT

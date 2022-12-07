@@ -1,0 +1,6 @@
+version: 2.0
+shards:
+  xattr:
+    git: https://github.com/aravindavk/xattr-crystal.git
+    version: 0.1.0+git.commit.2fc9b70536a16d12780f19c4b00b3b65b8e7175d
+
