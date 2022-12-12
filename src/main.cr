@@ -4,13 +4,52 @@ STATUS_UPDATE_GAP = 5
 REBALANCE_XATTR = "trusted.distribute.migrate-data"
 BLOCK_SIZE = 4096
 
+# .glusterfs
+# .glusterfs/changelogs/csnap
+# .glusterfs/changelogs/htime
+# .glusterfs/indices/dirty
+# .glusterfs/indices/entry-changes
+# .glusterfs/indices/xattrop
+KNOWN_DIRS_IN_DOT_GLUSTERFS = 6
+
 class Rebalancer
+  property scanned_bytes : Int64
   def initialize(@backend_dir : String, @mount_dir : String, @ignore_paths = [".glusterfs"])
     @total_bytes = 0_i64
     @scanned_bytes = BLOCK_SIZE.to_i64
     @start_time = Time.monotonic
     @last_status_updated = Time.monotonic
     update_total_bytes
+  end
+
+  def dot_glusterfs_dirs_du
+    all_dirs = [Path.new(".glusterfs")]
+    @scanned_bytes += KNOWN_DIRS_IN_DOT_GLUSTERFS * BLOCK_SIZE
+    while dir = all_dirs.shift?
+      Dir.each_child(Path.new(@backend_dir, dir)) do |entry|
+        rel_path = Path.new(dir, entry)
+        backend_full_path = Path.new(@backend_dir, rel_path)
+        if File.directory?(backend_full_path)
+          @scanned_bytes += BLOCK_SIZE
+
+          if entry.size == 2 && dir.basename == ".glusterfs"
+            all_dirs << rel_path
+          end
+
+          next
+        end
+
+        file_size = 0
+        begin
+          file_info = File.info(backend_full_path, follow_symlinks: false)
+          file_size = file_info.size
+        rescue ex : File::Error
+          next
+        end
+
+        add_scanned_bytes(file_size, 2)
+      end
+    end
   end
 
   def update_total_bytes
@@ -51,6 +90,8 @@ class Rebalancer
   end
 
   def crawl
+    dot_glusterfs_dirs_du
+
     all_dirs = [Path.new("")]
     while dir = all_dirs.shift?
       Dir.each_child(Path.new(@backend_dir, dir)) do |entry|
